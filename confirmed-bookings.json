@@ -1,0 +1,25 @@
+{
+  "bookingId": "BK20241201-001",
+  "customer": {
+    "name": "Demo User",
+    "email": "user@example.com",
+    "phone": "+91-9876543210"
+  },
+  "car": {
+    "name": "BMW X5",
+    "model": "xDrive40i",
+    "pricePerDay": 12000,
+    "image": "images/bmw.jpg"
+  },
+  "bookingDetails": {
+    "days": 5,
+    "totalPrice": 60000,
+    "bookingDate": "2024-12-01T10:30:00Z",
+    "status": "confirmed"
+  },
+  "additional": {
+    "pickupLocation": "Airport Branch",
+    "insurance": true,
+    "gps": false
+  }
+}

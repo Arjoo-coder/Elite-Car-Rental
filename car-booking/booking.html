@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Your Car - Elite Rentals</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header (Simplified) -->
+    <header class="header">
+        <nav class="nav-container">
+            <div class="logo">🚗 Elite Rentals</div>
+            <a href="index.html" class="login-btn" style="background: #10b981;">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+        </nav>
+    </header>
+
+    <!-- Booking Hero -->
+    <section class="booking-hero">
+        <div class="container">
+            <h1 class="booking-title" id="bookingTitle">Select Your Car</h1>
+            <img id="bookingImage" class="booking-image" 
+                 src="https://via.placeholder.com/400x250/2563eb/ffffff?text=Car+Image" 
+                 alt="Selected Car">
+        </div>
+    </section>
+
+    <!-- Booking Form -->
+    <section class="section">
+        <div class="booking-container">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--dark-color);">
+                <i class="fas fa-calendar-day"></i> Booking Details
+            </h2>
+            
+            <div class="form-group">
+                <label for="daysInput">Number of Days</label>
+                <input type="number" id="daysInput" class="days-input" 
+                       placeholder="Enter days (1-30)" min="1" max="30" required>
+            </div>
+            
+            <button class="calculate-btn" id="calculateBtn">
+                <i class="fas fa-calculator"></i> Calculate & Confirm
+            </button>
+            
+            <div class="result" id="result">
+                <h3 style="color: var(--success-color); margin-bottom: 1rem;">
+                    <i class="fas fa-check-circle"></i> Booking Confirmed!
+                </h3>
+                <div class="total-price" id="totalPrice">₹0</div>
+                <p style="margin-top: 1rem; opacity: 0.9;">Redirecting to home...</p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Booking Page Logic (Integrated)
+        class BookingApp {
+            constructor() {
+                this.selectedCar = null;
+                this.init();
+            }
+            
+            init() {
+                this.cacheElements();
+                this.bindEvents();
+                this.loadCarData();
+            }
+            
+            cacheElements() {
+                this.daysInput = document.getElementById('daysInput');
+                this.calculateBtn = document.getElementById('calculateBtn');
+                this.bookingTitle = document.getElementById('bookingTitle');
+                this.bookingImage = document.getElementById('bookingImage');
+                this.result = document.getElementById('result');
+                this.totalPriceEl = document.getElementById('totalPrice');
+            }
+            
+            bindEvents() {
+                this.calculateBtn.addEventListener('click', () => this.processBooking());
+                this.daysInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.processBooking();
+                });
+                this.daysInput.addEventListener('input', () => {
+                    this.daysInput.style.borderColor = '#e5e7eb';
+                });
+            }
+            
+            loadCarData() {
+                const carData = sessionStorage.getItem('selectedCar');
+                if (!carData) {
+                    alert('No car selected! Redirecting...');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                this.selectedCar = JSON.parse(carData);
+                this.bookingTitle.textContent = this.selectedCar.name;
+                this.bookingImage.src = this.selectedCar.image || 
+                    `https://via.placeholder.com/400x250/2563eb/ffffff?text=${this.selectedCar.name}`;
+                this.bookingImage.alt = this.selectedCar.name;
+            }
+            
+            async processBooking() {
+                const days = parseInt(this.daysInput.value);
+                
+                // Validation
+                if (!days || days < 1 || days > 30) {
+                    this.showError('Please enter 1-30 days');
+                    return;
+                }
+                
+                this.calculateBtn.disabled = true;
+                this.calculateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                try {
+                    // CALL YOUR C++ BACKEND! 🎉
+                    const formData = new FormData();
+                    formData.append('car', this.selectedCar.name);
+                    formData.append('days', days);
+                    
+                    const response = await fetch('booking.cgi.exe', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.showSuccess(result.totalPrice);
+                        this.completeBooking(result);
+                    } else {
+                        throw new Error(result.error || 'Booking failed');
+                    }
+                } catch (error) {
+                    console.error('C++ Error:', error);
+                    // Fallback calculation
+                    const fallbackPrice = this.selectedCar.price * days;
+                    this.showSuccess(fallbackPrice);
+                    this.completeBooking({
+                        success: true,
+                        totalPrice: fallbackPrice,
+                        car: this.selectedCar.name,
+                        days: days
+                    });
+                }
+            }
+            
+            showError(message) {
+                this.result.classList.remove('show');
+                this.daysInput.style.borderColor = '#ef4444';
+                this.daysInput.style.shake = 'true'; // CSS animation
+                alert('❌ ' + message);
+                this.resetButton();
+            }
+            
+            showSuccess(totalPrice) {
+                this.result.classList.add('show');
+                this.totalPriceEl.textContent = '₹' + totalPrice.toLocaleString();
+                this.resetButton();
+            }
+            
+            resetButton() {
+                this.calculateBtn.disabled = false;
+                this.calculateBtn.innerHTML = '<i class="fas fa-check"></i> Confirmed!';
+                setTimeout(() => {
+                    this.calculateBtn.innerHTML = '<i class="fas fa-calculator"></i> Calculate & Confirm';
+                }, 1500);
+            }
+            
+            completeBooking(result) {
+                // Save booking data
+                const bookingData = {
+                    ...this.selectedCar,
+                    days: result.days,
+                    totalPrice: result.totalPrice,
+                    timestamp: new Date().toISOString()
+                };
+                sessionStorage.setItem('completedBooking', JSON.stringify(bookingData));
+                
+                // Redirect after 2s
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            new BookingApp();
+        });
+    </script>
+
+    <style>
+        /* Booking Page Specific Styles */
+        .booking-hero {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+        }
+        
+        .booking-image {
+            animation: fadeInUp 0.8s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .days-input:invalid {
+            border-color: #ef4444;
+        }
+        
+        .result {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            animation: slideUp 0.5s ease;
+        }
+    </style>
+</body>
+</html>
